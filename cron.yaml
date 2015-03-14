@@ -1,0 +1,5 @@
+cron:
+- description: daily job
+  url: /daily
+  schedule: every day 06:30
+  timezone: Europe/Berlin

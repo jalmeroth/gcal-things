@@ -1,0 +1,26 @@
+application: gcal-things
+version: 1
+runtime: python27
+api_version: 1
+threadsafe: yes
+
+handlers:
+- url: /favicon\.ico
+  static_files: favicon.ico
+  upload: favicon\.ico
+
+- url: /store
+  static_dir: store
+  application_readable: true
+  login: admin
+
+- url: /daily
+  script: gcal-things.app
+  login: admin
+
+- url: .*
+  script: main.app
+
+libraries:
+- name: webapp2
+  version: "2.5.2"
