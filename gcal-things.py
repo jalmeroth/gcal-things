@@ -8,12 +8,11 @@ import json
 import time
 import urllib
 import webapp2
-import datetime
 
+from datetime import datetime, date, timedelta
 from oauth2.auth import Authenticator
-from helpers import load, dateFromIsoDate
+from helpers import load, GMT1
 from things import ccThings
-
 
 class DailyRequest(webapp2.RequestHandler):
     """docstring for DailyRequest"""
@@ -62,8 +61,8 @@ class DailyRequest(webapp2.RequestHandler):
         https://developers.google.com/google-apps/calendar/v3/reference/events/list
         
         """
-        today = datetime.date.today()
-        tomorrow = today + datetime.timedelta(days=+1)
+        today = date.today()
+        tomorrow = today + timedelta(days=+1)
         
         mini = timeMin if timeMin else today.isoformat()
         maxi = timeMax if timeMax else tomorrow.isoformat()
@@ -88,7 +87,7 @@ class DailyRequest(webapp2.RequestHandler):
                 "fields": "items(id,description,summary,start,end),nextPageToken"
             }
             
-            # print "Fetching events between", timeMin, "and", timeMax, "from", user_id, calendarId
+            logger.info("Fetching events between {0} and {1} from {2}#{3}".format(str(timeMin), str(timeMax), user_id, calendarId))
             
             r = self.auth.signedRequest(url, user_id, params=params)
             
@@ -105,12 +104,11 @@ class DailyRequest(webapp2.RequestHandler):
         logger.info("Found " + str(len(items)) + " items")
         return items
     
-    def _rfc3339(self, datum):
+    def _rfc3339(self, datum, sep = "T"):
         """docstring for _rfc3339"""
-        if time.daylight:
-            return dateFromIsoDate(datum, "T")+"+02:00" # GMT+1+Daylight
-        else:
-            return dateFromIsoDate(datum, "T")+"+01:00" #GMT+1
+        dtnaive = datetime.strptime(datum, "%Y-%m-%d")
+        dt_gmt1 = dtnaive.replace(tzinfo=GMT1())
+        return dt_gmt1.isoformat(sep)
     
     def get(self):
         self.response.headers['Content-Type'] = 'text/plain; charset=UTF-8'
@@ -127,8 +125,8 @@ class DailyRequest(webapp2.RequestHandler):
             tokens = self.prefs.get('tokens')
             items = {}
             
-            today = datetime.date.today()
-            tomorrow = today + datetime.timedelta(days=+1)
+            today = date.today()
+            tomorrow = today + timedelta(days=+1)
             logger.info("today: " + str(today) + " tomorrow: " + str(tomorrow))
             
             for user_id in users:
@@ -145,8 +143,8 @@ class DailyRequest(webapp2.RequestHandler):
                 items.update(self.preProcess(events, mini, True))
                 self.response.write(json.dumps(events) + "\n")
                 
-                mini = (today + datetime.timedelta(days=+2)).isoformat()
-                maxi = (today + datetime.timedelta(days=+3)).isoformat()
+                mini = (today + timedelta(days=+2)).isoformat()
+                maxi = (today + timedelta(days=+3)).isoformat()
                 
                 events = self.fetch(user_id, '#contacts@group.v.calendar.google.com', mini, maxi)
                 items.update(self.preProcess(events, mini, True))
