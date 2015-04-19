@@ -9,6 +9,8 @@ import time
 import urllib
 import webapp2
 
+from google.appengine.api.urlfetch_errors import DeadlineExceededError
+from google.appengine.api import mail
 from datetime import datetime, date, timedelta
 from oauth2.auth import Authenticator
 from helpers import load, GMT1
@@ -20,6 +22,9 @@ class DailyRequest(webapp2.RequestHandler):
         """docstring for __init__"""
         # Set self.request, self.response and self.app.
         self.initialize(request, response)
+        
+        self.error = False
+        
         json_file = "credentials.json"
         self.prefs = load(json_file)
         
@@ -89,7 +94,11 @@ class DailyRequest(webapp2.RequestHandler):
             
             logger.info("Fetching events between {0} and {1} from {2}#{3}".format(str(timeMin), str(timeMax), user_id, calendarId))
             
-            r = self.auth.signedRequest(url, user_id, params=params)
+            try:
+                r = self.auth.signedRequest(url, user_id, params=params)
+            except DeadlineExceededError:
+                logger.error("Request timed out.")
+                self.error = True
             
             if r.ok:
                 data = r.json()
@@ -167,6 +176,13 @@ class DailyRequest(webapp2.RequestHandler):
                 logger.debug("No new items found.")
             
             self.response.write(json.dumps(items) + "\n")
+            
+            if self.error and users[0]:
+                sender = "gcal-things@appspot.gserviceaccount.com"
+                to = users[0]
+                subject = "gcal-things: error"
+                body = "I was here: https://console.developers.google.com\n\nAn error"
+                mail.send_mail(sender=sender, to=to, subject=subject, body=body)
 
 app = webapp2.WSGIApplication([
         ('/daily', DailyRequest)
