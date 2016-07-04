@@ -15,10 +15,9 @@
 # limitations under the License.
 #
 import logging
+import webapp2
 # logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
-
-import webapp2
 
 
 class MainHandler(webapp2.RequestHandler):
@@ -26,5 +25,5 @@ class MainHandler(webapp2.RequestHandler):
         return self.redirect('https://github.com/jalmeroth/', permanent=True)
 
 app = webapp2.WSGIApplication([
-        ('/', MainHandler)
+    ('/', MainHandler)
 ], debug=True)
